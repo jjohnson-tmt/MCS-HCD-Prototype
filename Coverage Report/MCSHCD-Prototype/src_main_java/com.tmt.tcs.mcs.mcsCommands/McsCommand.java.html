@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../../.resources/report.gif" type="image/gif"/><title>McsCommand.java</title><link rel="stylesheet" href="../../../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=2;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../../.sessions.html" class="el_session">Sessions</a></span><a href="../../../index.html" class="el_report">java (3) (Nov 14, 2016 10:41:01 AM)</a> &gt; <a href="../../index.html" class="el_group">MCSHCD-Prototype</a> &gt; <a href="../index.html" class="el_bundle">src/main/java</a> &gt; <a href="index.source.html" class="el_package">com.tmt.tcs.mcs.mcsCommands</a> &gt; <span class="el_source">McsCommand.java</span></div><h1>McsCommand.java</h1><pre class="source lang-java linenums">package com.tmt.tcs.mcs.mcsCommands;
+
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.Properties;
+
+import com.google.protobuf.InvalidProtocolBufferException;
+import com.tmt.tcs.mcs.protos.TcsToMcsCommandProtos.CommandResponse;
+
+/**
+ * Represents base class for all MCS commands.
+ * @author E401581.
+ *
+ */
+public abstract class McsCommand {
+  
+  /**
+   * Command name.
+   */
+<span class="fc" id="L21">  private String commandName = null;</span>
+  
+  /**
+   * Name of config file.
+   */
+  private static final String CONFIG_FILE_NAME = &quot;config.properties&quot;;
+  
+  /**
+   * Generates byte packet as per the protocol.
+   * @return byte array containing packet to be sent to MCS on ZeroMQ.
+   */
+  public abstract byte[] encode();
+  
+  /**
+   * Properties loaded from config.properties.
+   */
+  private static Properties prop;
+  
+  static{
+<span class="fc" id="L40">    prop = new Properties();</span>
+    //InputStream input = null;
+<span class="fc" id="L42">    try ( InputStream input = new FileInputStream(CONFIG_FILE_NAME)){      </span>
+      // load a properties file
+<span class="fc" id="L44">      prop.load(input);</span>
+<span class="pc bpc" id="L45" title="7 of 8 branches missed.">    } catch (IOException ex) {</span>
+<span class="nc" id="L46">      ex.printStackTrace();</span>
+    }    
+<span class="fc" id="L48">  }</span>
+  
+  /**
+   * Initializes new instance of McsCommand class.
+   */
+<span class="fc" id="L53">  public McsCommand(String commandKey) {</span>
+    // Read configuration
+<span class="fc" id="L55">    commandName = prop.getProperty(commandKey);</span>
+<span class="fc" id="L56">  }</span>
+  
+  /**
+   * Parses the response packet.
+   * @param responsePaket responsePacket received on ZeroMQ pull socket for decoding.
+   */    
+  public CommandResponse decode(byte[] responsePaket) {
+    //Parse response
+<span class="fc bfc" id="L64" title="All 2 branches covered.">    if (responsePaket == null) {</span>
+<span class="fc" id="L65">      return null;</span>
+    }
+    
+<span class="fc" id="L68">    CommandResponse commandResponse = null;</span>
+    try {                      
+<span class="fc" id="L70">      commandResponse = CommandResponse.parseFrom(responsePaket);        </span>
+<span class="pc" id="L71">    } catch (InvalidProtocolBufferException ex) {      </span>
+<span class="nc" id="L72">      ex.printStackTrace();      </span>
+    }
+    
+<span class="fc" id="L75">    return commandResponse;</span>
+  }
+           
+  /**
+   * Returns name for the command.
+   */  
+  public String getCommandName() {
+<span class="fc" id="L82">    return commandName;</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.6.201602180812</span>java (3) (Nov 14, 2016 10:41:01 AM)</div></body></html>

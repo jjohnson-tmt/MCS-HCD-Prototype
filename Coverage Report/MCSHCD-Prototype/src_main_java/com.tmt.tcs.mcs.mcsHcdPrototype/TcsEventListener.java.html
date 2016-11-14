@@ -1,0 +1,192 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../../.resources/report.gif" type="image/gif"/><title>TcsEventListener.java</title><link rel="stylesheet" href="../../../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=2;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../../.sessions.html" class="el_session">Sessions</a></span><a href="../../../index.html" class="el_report">java (3) (Nov 14, 2016 10:41:01 AM)</a> &gt; <a href="../../index.html" class="el_group">MCSHCD-Prototype</a> &gt; <a href="../index.html" class="el_bundle">src/main/java</a> &gt; <a href="index.source.html" class="el_package">com.tmt.tcs.mcs.mcsHcdPrototype</a> &gt; <span class="el_source">TcsEventListener.java</span></div><h1>TcsEventListener.java</h1><pre class="source lang-java linenums">package com.tmt.tcs.mcs.mcsHcdPrototype;
+
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.Properties;
+import java.util.logging.FileHandler;
+import java.util.logging.Logger;
+
+/**
+ * @author E401581.
+ *     {@link EventListener} implementation for TcsEventListener.
+ *     As for the prototype generates continuous position demands.
+ */
+final class TcsEventListener implements EventListener {
+
+  /**
+   * Singleton instance for the class.
+   */
+<span class="fc" id="L20">  private static TcsEventListener instance = null;</span>
+  
+  /**
+   * azimuth position demand.
+   */
+<span class="fc" id="L25">  private double az = 30.0;</span>
+
+  /**
+   * elevation position demand.
+   */
+<span class="fc" id="L30">  private double el = 30.0;</span>
+
+  /**
+   * Increment for the az and el demand.
+   */
+  private static final double DEMAND_INCREMENT = 5.00;
+
+  /**
+   * Minimum az, el demand value.
+   */
+  private static final double MIN_DEMAND = 30.0;
+
+  /**
+   * Maximum az, el demand value.
+   */
+  private static final double MAX_DEMAND = 60.0;
+
+  /**
+   * number of events to complete 1 minute.
+   */
+  private static final int MAX_ITERATIONS = 6000;
+
+  /**
+   * Name of log file.
+   */
+<span class="fc" id="L55">  private static String logFileName = null;</span>
+
+  /**
+   * Config property name for log file.
+   */
+  private static final String LOG_FILE_NAME_KEY = &quot;logfile&quot;;
+
+  /**
+   * Logger instance.
+   */
+<span class="fc" id="L65">  private static final Logger logger = Logger</span>
+<span class="fc" id="L66">      .getLogger(TcsEventListener.class.getName());</span>
+
+  /**
+   * Counter for changing demand.
+   */
+<span class="fc" id="L71">  private int startIteration = 1;</span>
+  
+  /**
+   * Gets the current Az value.
+   * @return Az.
+   */
+  public double getAz() {
+<span class="fc" id="L78">    return az;</span>
+  }
+  
+  /**
+   * Gets the current El value.
+   * @return El.
+   */
+  public double getEl() {
+<span class="fc" id="L86">    return el;</span>
+  }
+  
+  /**
+   * Initializes new instance of TcsEventListener.
+   */
+<span class="fc" id="L92">  private TcsEventListener() {</span>
+
+<span class="fc" id="L94">  }</span>
+  
+  /**
+   * Gets singleton instance of class.
+   * @return object of type TcsEventListener.
+   */
+  public static TcsEventListener getInstance() {
+<span class="fc bfc" id="L101" title="All 2 branches covered.">    if (instance == null) {</span>
+<span class="fc" id="L102">      instance = new TcsEventListener();</span>
+    }
+    
+<span class="fc" id="L105">    return instance;</span>
+  }
+
+  /* (non-Javadoc)
+   * @see com.tmt.tcs.mcs.mcsHcdPrototype.EventListener#listenforHcdCommand()
+   */
+  public void listenforEvents() {
+    //Logic to return new position demand each time the method is called.
+<span class="fc" id="L113">    boolean status = CommandExecutor.getInstance().sendPositionDemands(az, el, 0.0);</span>
+
+<span class="pc bpc" id="L115" title="1 of 2 branches missed.">    if (status) {</span>
+<span class="fc" id="L116">      Double azimuth = new Double(az);</span>
+<span class="fc" id="L117">      Double elevation = new Double(el);</span>
+<span class="fc" id="L118">      startIteration++;</span>
+<span class="fc" id="L119">      System.out.println(&quot;position demand sent.&quot;);</span>
+<span class="fc" id="L120">      System.out.println(&quot;demand sent &quot; + azimuth.toString() + &quot;, &quot;</span>
+<span class="fc" id="L121">          + elevation.toString());</span>
+
+<span class="fc" id="L123">      logger.info(&quot;position demand sent az = &quot; + azimuth.toString()</span>
+<span class="fc" id="L124">          + &quot; el = &quot; + elevation.toString());</span>
+
+      // Generate next az
+<span class="fc bfc" id="L127" title="All 2 branches covered.">      if (startIteration == MAX_ITERATIONS) {</span>
+<span class="fc bfc" id="L128" title="All 2 branches covered.">        if (az == MAX_DEMAND) {</span>
+<span class="fc" id="L129">          az = MIN_DEMAND;</span>
+<span class="fc" id="L130">          logger.info(&quot;az demand reset to &quot; + ((Double)az).toString());</span>
+<span class="fc" id="L131">        } else {</span>
+<span class="fc" id="L132">          az += DEMAND_INCREMENT;</span>
+<span class="fc" id="L133">          logger.info(&quot;az demand incremented to &quot; + ((Double)az).toString());</span>
+        }
+      }
+
+      // Generate next el
+<span class="fc bfc" id="L138" title="All 2 branches covered.">      if (startIteration == MAX_ITERATIONS) {</span>
+<span class="fc bfc" id="L139" title="All 2 branches covered.">        if (el == MAX_DEMAND) {</span>
+<span class="fc" id="L140">          el = MIN_DEMAND;</span>
+<span class="fc" id="L141">          logger.info(&quot;el demand reset to &quot; + ((Double)el).toString());</span>
+<span class="fc" id="L142">        } else {</span>
+<span class="fc" id="L143">          el += DEMAND_INCREMENT;</span>
+<span class="fc" id="L144">          logger.info(&quot;el demand incremented to &quot; + ((Double)el).toString());</span>
+        }
+
+<span class="fc" id="L147">        startIteration = 1;</span>
+      }
+    }
+
+<span class="fc" id="L151">  }</span>
+
+  public void init() {
+<span class="fc" id="L154">    logger.info(&quot;init called.&quot;);</span>
+<span class="fc" id="L155">    Properties prop = new Properties();    </span>
+
+<span class="fc" id="L157">    try (InputStream input = new FileInputStream(&quot;config.properties&quot;)) {      </span>
+      // load a properties file
+      try {
+<span class="fc" id="L160">        prop.load(input);</span>
+<span class="fc" id="L161">        logFileName = prop.getProperty(LOG_FILE_NAME_KEY);</span>
+<span class="pc" id="L162">      } catch (IOException e2) {</span>
+<span class="nc" id="L163">        e2.printStackTrace();</span>
+      } 
+
+<span class="pc bpc" id="L166" title="7 of 8 branches missed.">    } catch (IOException e2) {</span>
+<span class="nc" id="L167">      e2.printStackTrace();</span>
+    } 
+    // Logger initialization
+    try {
+
+<span class="fc" id="L172">      logger.addHandler(new FileHandler(logFileName));</span>
+<span class="pc" id="L173">    } catch (SecurityException ex) {</span>
+<span class="nc" id="L174">      ex.printStackTrace();</span>
+<span class="nc" id="L175">    } catch (IOException ex) {</span>
+<span class="nc" id="L176">      ex.printStackTrace();</span>
+    }
+    
+<span class="fc" id="L179">    logger.info(&quot;init completed.&quot;);    </span>
+<span class="fc" id="L180">  }</span>
+
+  public void start() {
+    
+<span class="fc" id="L184">  }</span>
+
+  public void stop() {
+    //Ensures that a new instance will be created.
+<span class="fc" id="L188">    instance = null;</span>
+<span class="fc" id="L189">  }</span>
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.6.201602180812</span>java (3) (Nov 14, 2016 10:41:01 AM)</div></body></html>

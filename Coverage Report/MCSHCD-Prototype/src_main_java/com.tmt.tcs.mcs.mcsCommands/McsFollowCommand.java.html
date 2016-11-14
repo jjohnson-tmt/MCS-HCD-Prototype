@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../../.resources/report.gif" type="image/gif"/><title>McsFollowCommand.java</title><link rel="stylesheet" href="../../../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=2;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../../.sessions.html" class="el_session">Sessions</a></span><a href="../../../index.html" class="el_report">java (3) (Nov 14, 2016 10:41:01 AM)</a> &gt; <a href="../../index.html" class="el_group">MCSHCD-Prototype</a> &gt; <a href="../index.html" class="el_bundle">src/main/java</a> &gt; <a href="index.source.html" class="el_package">com.tmt.tcs.mcs.mcsCommands</a> &gt; <span class="el_source">McsFollowCommand.java</span></div><h1>McsFollowCommand.java</h1><pre class="source lang-java linenums">package com.tmt.tcs.mcs.mcsCommands;
+
+import com.google.protobuf.GeneratedMessage;
+
+import com.tmt.tcs.mcs.protos.TcsToMcsCommandProtos.FollowCommand;
+import com.tmt.tcs.mcs.protos.TcsToMcsCommandProtos.FollowCommand.Axes;
+
+import java.util.Objects;
+
+/**
+ * {@link McsCommand} implementation for follow command.
+ * @author E401581.  
+ *
+ */
+public final class McsFollowCommand extends McsCommand {
+  
+  /**
+   * Config key name to read follow command identifier.
+   */
+  private static final String FOLLOW_COMMAND_KEY_NAME = &quot;followcommandname&quot;;
+  
+  /**
+   * Singleton instance of Follow class.
+   */
+  private static McsFollowCommand instance;
+  
+  /**
+   * {@link Axes} that needs to be put into following state.
+   */
+  private Axes axes;
+
+  /**
+   * Initializes new instance of McsFollowCommand class.
+   */
+  private McsFollowCommand() {
+<span class="fc" id="L36">    super(FOLLOW_COMMAND_KEY_NAME);    </span>
+<span class="fc" id="L37">  }</span>
+  
+  /**
+   * Gets singleton instance of McsFollowCommand. 
+   * @return object of type McsFollowCommand.
+   */
+  public static McsFollowCommand getInstance() {
+<span class="fc bfc" id="L44" title="All 2 branches covered.">    if (instance == null) {</span>
+<span class="fc" id="L45">      instance = new McsFollowCommand();</span>
+    }
+    
+<span class="fc" id="L48">    return instance;</span>
+  }
+  
+  /**
+   * Sets the axis for which the follow command needs to be executed.
+   * @param axes {@link Axes} to be put into following state.
+   */
+  public void setAxes(Axes axes) {
+<span class="fc" id="L56">    this.axes = axes;</span>
+<span class="fc" id="L57">  }</span>
+  
+  /**
+   * Generates the byte packet for follow command as per the protocol.
+   * @return byte array containing packet to be sent to MCS on ZeroMQ.
+   */
+  @Override
+  public byte[] encode() {
+    // Create command object
+<span class="fc" id="L66">    byte[] result = null;</span>
+<span class="fc" id="L67">    GeneratedMessage command = FollowCommand.newBuilder()</span>
+<span class="fc" id="L68">        .setAxes(axes).build();</span>
+    
+<span class="pc bpc" id="L70" title="1 of 2 branches missed.">    if (/*Objects.nonNull(command)*/ command != null) {</span>
+<span class="fc" id="L71">      result = command.toByteArray();</span>
+    }
+    
+<span class="fc" id="L74">    return result;</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.6.201602180812</span>java (3) (Nov 14, 2016 10:41:01 AM)</div></body></html>

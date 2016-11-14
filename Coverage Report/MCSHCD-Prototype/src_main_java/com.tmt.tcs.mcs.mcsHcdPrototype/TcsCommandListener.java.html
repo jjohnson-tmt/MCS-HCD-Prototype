@@ -1,0 +1,336 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../../.resources/report.gif" type="image/gif"/><title>TcsCommandListener.java</title><link rel="stylesheet" href="../../../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=2;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../../.sessions.html" class="el_session">Sessions</a></span><a href="../../../index.html" class="el_report">java (3) (Nov 14, 2016 10:41:01 AM)</a> &gt; <a href="../../index.html" class="el_group">MCSHCD-Prototype</a> &gt; <a href="../index.html" class="el_bundle">src/main/java</a> &gt; <a href="index.source.html" class="el_package">com.tmt.tcs.mcs.mcsHcdPrototype</a> &gt; <span class="el_source">TcsCommandListener.java</span></div><h1>TcsCommandListener.java</h1><pre class="source lang-java linenums">package com.tmt.tcs.mcs.mcsHcdPrototype;
+
+import com.tmt.tcs.mcs.protos.TcsToMcsCommandProtos.FollowCommand.Axes;
+import com.tmt.tcs.mcs.protos.TcsToMcsCommandProtos.TransitionType;
+
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.LinkedList;
+import java.util.Properties;
+import java.util.PropertyResourceBundle;
+import java.util.Queue;
+import java.util.ResourceBundle;
+import java.util.logging.Logger;
+
+/**
+ * {@link CommandListener} implementation for CommandListener
+ * @author E401581.
+ *
+ */
+final class TcsCommandListener implements CommandListener {
+  
+  /**
+   * Flag indicates that command listener is already processing a command.
+   */
+<span class="fc" id="L27">  private boolean isBusy = false;</span>
+  
+  /**
+   * Lifecycle command identifier.
+   */
+  private static final int LIFECYCLE_COMMAND = 1;
+  
+  /**
+   * Follow command identifier.
+   */
+  private static final int FOLLOW_COMMAND = 2;
+  
+  /**
+   * Represents current command under execution.
+   */
+  private int commandUnderExecution;
+  
+  /**
+   * Queue contains mcs commands sent by TCS.
+   */
+<span class="fc" id="L47">  private Queue&lt;Integer&gt; mcsCommandQueue = null;</span>
+  
+  /**
+   * Key name errorstateheader from string.properties.
+   */
+  private static final String ERROR_STATE_HEADER = &quot;errorstateheader&quot;;
+  
+  /**
+   * Key name errorinfoheader from string.properties.
+   */
+  private static final String ERROR_INFO_HEADER = &quot;errorinfoheader&quot;;
+  
+  /**
+   * Key name timeheader from string.properties.
+   */
+  private static final String TIME_HEADER = &quot;timeheader&quot;;
+  
+  /**
+   * Logger instance.
+   */
+<span class="fc" id="L67">  private static final Logger logger = Logger.getLogger(TcsCommandListener.class.getName());</span>
+  
+  /**
+   * Resource bundle to load resources.
+   */
+<span class="fc" id="L72">  private static ResourceBundle strings = null;</span>
+  
+  /**
+   * Name of string resource file.
+   */
+  private static final String RESOURCE_FILE_NAME = &quot;string.properties&quot;;
+  
+  /**
+   * Singleton instance for the class.
+   */
+<span class="fc" id="L82">  private static TcsCommandListener instance = null;</span>
+  
+  /**
+   * Receive timeout in miliseconds.
+   */
+<span class="fc" id="L87">  private int receiveTimeout = 5000;</span>
+
+  /**
+   * Config property name for receive timeout value in miliseconds.
+   */
+  private static final String RECEIVE_TIMEOUT_KEY = &quot;receivetimeout&quot;;
+  
+  /**
+   * {@link HcdRuntimeController} instance.
+   */
+<span class="fc" id="L97">  private HcdRuntimeController controller = null;</span>
+  
+  /**
+   * Time when command was sent in miliseconds.
+   */
+  private long commandSentTime;
+  
+  /**
+   * Time when follow command was dequeued.
+   */
+  private long commandDequeuedTime;
+  
+  /**
+   * Delay in miliseconds for follow command.
+   */
+<span class="fc" id="L112">  private static final long FOLLOW_COMMAND_DELAY = 18000;</span>
+  
+  /**
+   * {@link OperationResult} of sending/receiving TCS command to MCS on ZeroMQ.
+   */
+<span class="fc" id="L117">  private OperationResult result = null;</span>
+    
+  /**
+   * Initializes new instance of TcsCommandListener.
+   */
+<span class="fc" id="L122">  private TcsCommandListener() {</span>
+<span class="fc" id="L123">    mcsCommandQueue = new LinkedList&lt;Integer&gt;();</span>
+<span class="fc" id="L124">  }</span>
+  
+  /**
+   * Setting callback for state event reporting.
+   * @param controller {@link HcdRuntimeController} object.
+   */
+  public void setCallback(HcdRuntimeController controller) {
+<span class="fc" id="L131">    this.controller = controller;</span>
+<span class="fc" id="L132">  }</span>
+  
+  /**
+   * Gets singleton instance of class.
+   * @return object of type TcsCommandListener.
+   */
+  public static TcsCommandListener getInstance() {
+<span class="fc bfc" id="L139" title="All 2 branches covered.">    if (instance == null) {</span>
+<span class="fc" id="L140">      instance = new TcsCommandListener();</span>
+    }
+    
+<span class="fc" id="L143">    return instance;</span>
+  }
+  
+  /**
+   * Provides intialization.
+   */
+  public void init() {
+<span class="fc" id="L150">    logger.info(&quot;init called.&quot;);</span>
+    try {
+<span class="fc" id="L152">      FileInputStream fis = new FileInputStream(RESOURCE_FILE_NAME);</span>
+      try {
+<span class="fc" id="L154">        strings = new PropertyResourceBundle(fis);</span>
+<span class="pc" id="L155">      } catch (IOException ex) {</span>
+<span class="nc" id="L156">        ex.printStackTrace();</span>
+<span class="nc" id="L157">        logger.severe(ex.getMessage());</span>
+      }
+<span class="nc" id="L159">    } catch (FileNotFoundException e1) {</span>
+<span class="nc" id="L160">      e1.printStackTrace();</span>
+<span class="nc" id="L161">      logger.severe(e1.getMessage());</span>
+    }
+    
+    //Code to simulate reading commands from MCS assembly on private AKKA and queuing them in
+<span class="fc" id="L165">    mcsCommandQueue.offer(LIFECYCLE_COMMAND);</span>
+<span class="fc" id="L166">    mcsCommandQueue.offer(FOLLOW_COMMAND);</span>
+<span class="fc" id="L167">    logger.info(&quot;Queued lifecycle and follow command messages.&quot;);</span>
+    
+    // Read configuration
+<span class="fc" id="L170">    Properties prop = new Properties();    </span>
+    
+<span class="fc" id="L172">    try (InputStream input = new FileInputStream(&quot;config.properties&quot;)) {               </span>
+      // load a properties file
+      try {
+<span class="fc" id="L175">        prop.load(input);</span>
+<span class="fc" id="L176">        receiveTimeout = Integer.parseInt(prop.getProperty(RECEIVE_TIMEOUT_KEY));</span>
+<span class="fc" id="L177">        logger.info(&quot;Read timeout from config properties.&quot;);</span>
+<span class="pc" id="L178">      } catch (IOException ex) {</span>
+<span class="nc" id="L179">        ex.printStackTrace();</span>
+      } 
+<span class="pc bpc" id="L181" title="7 of 8 branches missed.">    } catch (IOException ex) {</span>
+<span class="nc" id="L182">      ex.printStackTrace();</span>
+    } 
+
+<span class="fc" id="L185">    logger.info(&quot;init completed.&quot;);</span>
+<span class="fc" id="L186">  }</span>
+
+  /**
+   * Listens for commands from MCS Assembly, initiates execution for commands and returns response.
+   */
+  public void listenforHcdCommand() {
+<span class="fc" id="L192">    logger.info(&quot;listenforHcdCommand called.&quot;);</span>
+    //Read command from queue
+<span class="fc" id="L194">    Integer command = mcsCommandQueue.peek();</span>
+<span class="pc bpc" id="L195" title="1 of 2 branches missed.">    if (command != null) {</span>
+<span class="fc" id="L196">      logger.info(&quot;dequeued command: &quot; + command.toString());      </span>
+    }
+    
+<span class="pc bpc" id="L199" title="3 of 4 branches missed.">    if ((command == null) &amp;&amp; (!isBusy)) {</span>
+<span class="nc" id="L200">      return;</span>
+<span class="fc bfc" id="L201" title="All 2 branches covered.">    } else if (isBusy) {</span>
+<span class="fc" id="L202">      logger.info(&quot;Lisetner already has command sent: &quot; </span>
+<span class="fc" id="L203">          + ((Integer)commandUnderExecution).toString());</span>
+      if (command != null) {
+        //TBD
+        //Send busy response to MCS Assembly
+      }      
+      
+      //Read response for the command currently under execution
+<span class="pc bpc" id="L210" title="1 of 3 branches missed.">      switch (commandUnderExecution) {</span>
+        case  LIFECYCLE_COMMAND:
+<span class="fc" id="L212">          result = CommandExecutor.getInstance().readLifecycleCommandResponse();</span>
+<span class="fc" id="L213">          break;</span>
+        case FOLLOW_COMMAND:
+<span class="fc" id="L215">          result = CommandExecutor.getInstance().readFollowCommandResponse();</span>
+<span class="fc" id="L216">          break; </span>
+        default:
+          break;
+            
+      }
+      
+<span class="fc bfc" id="L222" title="All 2 branches covered.">      if (result == null) {</span>
+<span class="fc" id="L223">        logger.info(&quot;Lisetner did not receive response for command: &quot; </span>
+<span class="fc" id="L224">            + ((Integer)commandUnderExecution).toString());</span>
+        //Consider timeout
+<span class="fc bfc" id="L226" title="All 2 branches covered.">        if ((System.currentTimeMillis() - commandSentTime) &gt; receiveTimeout) {</span>
+          //isBusy = false in case of timeout
+          //This will allow retry
+<span class="fc" id="L229">          logger.info(&quot;Response timeout for command: &quot; </span>
+<span class="fc" id="L230">              + ((Integer)commandUnderExecution).toString());</span>
+<span class="fc" id="L231">          isBusy = false;</span>
+<span class="fc" id="L232">          System.out.println(&quot;Response timeout.&quot;);</span>
+<span class="fc" id="L233">          return;</span>
+        }
+                        
+      } else {
+        //Retry in case command status is fail
+<span class="fc" id="L238">        logger.info(&quot;Listener received response for command: &quot; </span>
+<span class="fc" id="L239">            + ((Integer)commandUnderExecution).toString());</span>
+        
+        // Print command response
+<span class="fc" id="L242">        StatusCodes status = result.getStatus();</span>
+<span class="fc" id="L243">        System.out.println(strings.getString(ERROR_STATE_HEADER)</span>
+<span class="fc" id="L244">            + status.name());</span>
+
+<span class="fc" id="L246">        System.out.println(strings.getString(ERROR_INFO_HEADER)</span>
+<span class="fc" id="L247">            + result.getErrorInfo());</span>
+<span class="fc" id="L248">        System.out.println(strings.getString(TIME_HEADER)</span>
+<span class="fc" id="L249">            + Double.toString(result.getTimeWhenProcessed()));</span>
+
+<span class="pc bpc" id="L251" title="1 of 2 branches missed.">        if (status != StatusCodes.Success) {</span>
+<span class="nc" id="L252">          System.out.println(result.getErrorInfo());</span>
+<span class="nc" id="L253">          System.out.println(Double.toString(result.getTimeWhenProcessed()));</span>
+<span class="nc" id="L254">          logger.info(&quot;Response acknowledgment has fail status for command: &quot; </span>
+<span class="nc" id="L255">              + ((Integer)commandUnderExecution).toString());</span>
+          //Dont remove from queue only reset flag to enable retry
+<span class="nc" id="L257">          isBusy = false;</span>
+<span class="nc" id="L258">          return;</span>
+        } else {
+          // If success
+          // Print
+<span class="fc" id="L262">          logger.info(&quot;command succeeded&quot;);</span>
+          
+<span class="fc" id="L264">          mcsCommandQueue.poll();</span>
+<span class="fc" id="L265">          isBusy = false;</span>
+          //For prototype only.
+<span class="fc bfc" id="L267" title="All 2 branches covered.">          if (commandUnderExecution == FOLLOW_COMMAND) {</span>
+<span class="fc" id="L268">            controller.setState(true);</span>
+<span class="fc" id="L269">          } else {</span>
+            //delay follow command send
+<span class="fc" id="L271">            commandDequeuedTime = System.currentTimeMillis();</span>
+          }
+<span class="fc" id="L273">          return;</span>
+        }                
+      }
+      
+<span class="fc" id="L277">      return;</span>
+    } 
+    
+<span class="pc bpc" id="L280" title="2 of 4 branches missed.">    if ((command != null) &amp;&amp; (!isBusy)) {</span>
+<span class="fc" id="L281">      commandUnderExecution = command;</span>
+      //identify the type of command
+      //Call respective method on Cmd Executor for sending command
+            
+<span class="pc bpc" id="L285" title="1 of 3 branches missed.">      switch (command) {</span>
+        case  LIFECYCLE_COMMAND:
+<span class="fc" id="L287">          System.out.println(&quot;Sending lifecycle command with startup&quot;);</span>
+<span class="fc" id="L288">          result = CommandExecutor.getInstance()</span>
+<span class="fc" id="L289">          .sendLifecycleCommand(TransitionType.STARTUP);          </span>
+<span class="fc" id="L290">          break;</span>
+        case FOLLOW_COMMAND:
+          
+<span class="pc bpc" id="L293" title="1 of 2 branches missed.">          if ((System.currentTimeMillis() - commandDequeuedTime) &gt; FOLLOW_COMMAND_DELAY) {</span>
+            //logic only for prototype implementation 
+            //since the simulator does not respond to Follow command within
+            //the first 10 seconds 
+            //after responding successfully to the lifecycle command.
+<span class="fc" id="L298">            System.out.println(&quot;Sending follow command for both axes&quot;);</span>
+<span class="fc" id="L299">            result = CommandExecutor.getInstance().sendFollowCommand(Axes.BOTH);</span>
+<span class="fc" id="L300">          } else {</span>
+<span class="nc" id="L301">            return;</span>
+          }
+          
+          break;
+        default:
+          break;
+      }
+      
+<span class="pc bpc" id="L309" title="2 of 4 branches missed.">      if ((result != null) &amp;&amp; (result.getStatus() == StatusCodes.Success)) {</span>
+<span class="fc" id="L310">        logger.info(&quot;Command sent to MCS, command: &quot; + ((Integer)commandUnderExecution).toString());</span>
+<span class="fc" id="L311">        isBusy = true;</span>
+<span class="fc" id="L312">        commandSentTime = System.currentTimeMillis();</span>
+<span class="fc" id="L313">        System.out.println(&quot;command sent successfully.&quot;);</span>
+<span class="fc" id="L314">      } else {</span>
+<span class="nc" id="L315">        logger.info(&quot;Command sending to MCS failed, command: &quot; </span>
+<span class="nc" id="L316">            + ((Integer)commandUnderExecution).toString());</span>
+<span class="nc" id="L317">        System.out.println(&quot;command sending failed.&quot;);</span>
+        //no listener connected drop the command.
+        //mcsCommandQueue.poll();
+        
+      }
+    } 
+    
+<span class="fc" id="L324">    logger.info(&quot;listenforHcdCommand exit.&quot;);</span>
+<span class="fc" id="L325">  }</span>
+  
+  public void start() {
+    
+<span class="nc" id="L329">  }</span>
+
+  public void stop() {
+    //Ensures that a new instance would be created.
+<span class="fc" id="L333">    instance = null;</span>
+<span class="fc" id="L334">  }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.6.201602180812</span>java (3) (Nov 14, 2016 10:41:01 AM)</div></body></html>

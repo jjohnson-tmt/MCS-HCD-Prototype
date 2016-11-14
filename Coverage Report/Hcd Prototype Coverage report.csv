@@ -1,0 +1,34 @@
+GROUP,PACKAGE,CLASS,INSTRUCTION_MISSED,INSTRUCTION_COVERED,BRANCH_MISSED,BRANCH_COVERED,LINE_MISSED,LINE_COVERED,COMPLEXITY_MISSED,COMPLEXITY_COVERED,METHOD_MISSED,METHOD_COVERED
+"java (3) (Nov 14, 2016 10:41:01 AM)/MCSHCD-Prototype/src/main/java",com.tmt.tcs.mcs.mcsCommands,McsFollowCommand,0,31,1,3,0,13,1,5,0,4
+"java (3) (Nov 14, 2016 10:41:01 AM)/MCSHCD-Prototype/src/main/java",com.tmt.tcs.mcs.mcsCommands,McsCommand,27,48,7,3,2,16,4,5,0,4
+"java (3) (Nov 14, 2016 10:41:01 AM)/MCSHCD-Prototype/src/main/java",com.tmt.tcs.mcs.mcsCommands,McsLifecycleCommand,0,31,1,3,0,13,1,5,0,4
+"java (3) (Nov 14, 2016 10:41:01 AM)/MCSHCD-Prototype/src/main/java",com.tmt.tcs.mcs.protos,TcsMcsEventsProtos.McsCurrentPositionEvent,229,783,57,72,64,193,81,46,25,31
+"java (3) (Nov 14, 2016 10:41:01 AM)/MCSHCD-Prototype/src/main/java",com.tmt.tcs.mcs.protos,TcsMcsEventsProtos.TcsPositionDemandEvent.Builder,235,116,30,4,67,36,37,8,20,8
+"java (3) (Nov 14, 2016 10:41:01 AM)/MCSHCD-Prototype/src/main/java",com.tmt.tcs.mcs.protos,TcsToMcsCommandProtos.CommandResponse.Builder,434,157,56,8,130,49,59,9,27,9
+"java (3) (Nov 14, 2016 10:41:01 AM)/MCSHCD-Prototype/src/main/java",com.tmt.tcs.mcs.protos,TcsToMcsCommandProtos.LifeCycleCommand.Builder,146,69,17,3,44,24,24,6,14,6
+"java (3) (Nov 14, 2016 10:41:01 AM)/MCSHCD-Prototype/src/main/java",com.tmt.tcs.mcs.protos,TcsToMcsCommandProtos.CommandResponse,183,393,28,34,53,117,46,27,21,19
+"java (3) (Nov 14, 2016 10:41:01 AM)/MCSHCD-Prototype/src/main/java",com.tmt.tcs.mcs.protos,TcsToMcsCommandProtos.FollowCommand.Builder,146,69,17,3,44,24,24,6,14,6
+"java (3) (Nov 14, 2016 10:41:01 AM)/MCSHCD-Prototype/src/main/java",com.tmt.tcs.mcs.protos,TcsMcsEventsProtos,117,0,0,0,24,0,4,0,4,0
+"java (3) (Nov 14, 2016 10:41:01 AM)/MCSHCD-Prototype/src/main/java",com.tmt.tcs.mcs.protos,TcsToMcsCommandProtos.new Descriptors.FileDescriptor.InternalDescriptorAssigner() {...},7,0,0,0,4,0,2,0,2,0
+"java (3) (Nov 14, 2016 10:41:01 AM)/MCSHCD-Prototype/src/main/java",com.tmt.tcs.mcs.protos,TcsToMcsCommandProtos.LifeCycleCommand,136,183,10,13,37,57,29,15,20,12
+"java (3) (Nov 14, 2016 10:41:01 AM)/MCSHCD-Prototype/src/main/java",com.tmt.tcs.mcs.protos,TcsMcsEventsProtos.McsCurrentPositionEvent.Builder,715,376,100,14,187,106,107,18,50,18
+"java (3) (Nov 14, 2016 10:41:01 AM)/MCSHCD-Prototype/src/main/java",com.tmt.tcs.mcs.protos,TcsMcsEventsProtos.new Descriptors.FileDescriptor.InternalDescriptorAssigner() {...},7,0,0,0,4,0,2,0,2,0
+"java (3) (Nov 14, 2016 10:41:01 AM)/MCSHCD-Prototype/src/main/java",com.tmt.tcs.mcs.protos,TcsToMcsCommandProtos.FollowCommand,136,183,10,13,37,57,29,15,20,12
+"java (3) (Nov 14, 2016 10:41:01 AM)/MCSHCD-Prototype/src/main/java",com.tmt.tcs.mcs.protos,TcsMcsEventsProtos.TcsPositionDemandEvent,222,200,23,16,65,52,44,13,24,12
+"java (3) (Nov 14, 2016 10:41:01 AM)/MCSHCD-Prototype/src/main/java",com.tmt.tcs.mcs.protos,TcsToMcsCommandProtos,90,0,0,0,30,0,4,0,4,0
+"java (3) (Nov 14, 2016 10:41:01 AM)/MCSHCD-Prototype/src/main/java",com.tmt.tcs.mcs.protos,TcsToMcsCommandProtos.TransitionType,44,92,6,1,12,19,11,5,6,5
+"java (3) (Nov 14, 2016 10:41:01 AM)/MCSHCD-Prototype/src/main/java",com.tmt.tcs.mcs.protos,TcsToMcsCommandProtos.FollowCommand.Axes,42,80,5,1,11,17,10,5,6,5
+"java (3) (Nov 14, 2016 10:41:01 AM)/MCSHCD-Prototype/src/main/java",com.tmt.tcs.mcs.protos,TcsToMcsCommandProtos.CmdError,46,104,7,1,13,21,12,5,6,5
+"java (3) (Nov 14, 2016 10:41:01 AM)/MCSHCD-Prototype/src/main/java",com.tmt.tcs.mcs.tcsToMcsEvents,PositionDemandEvent,0,51,0,2,0,18,0,8,0,7
+"java (3) (Nov 14, 2016 10:41:01 AM)/MCSHCD-Prototype/src/main/java",com.tmt.tcs.mcs.tcsToMcsEvents,TcsEvent,27,36,7,1,2,10,4,2,0,2
+"java (3) (Nov 14, 2016 10:41:01 AM)/MCSHCD-Prototype/src/main/java",com.tmt.tcs.mcs.mcsHcdPrototype,TcsEventPublisher,6,14,0,2,5,6,4,4,4,3
+"java (3) (Nov 14, 2016 10:41:01 AM)/MCSHCD-Prototype/src/main/java",com.tmt.tcs.mcs.mcsHcdPrototype,TcsEventListener,34,230,8,12,5,54,5,14,0,9
+"java (3) (Nov 14, 2016 10:41:01 AM)/MCSHCD-Prototype/src/main/java",com.tmt.tcs.mcs.mcsHcdPrototype,App,29,0,0,0,10,0,2,0,2,0
+"java (3) (Nov 14, 2016 10:41:01 AM)/MCSHCD-Prototype/src/main/java",com.tmt.tcs.mcs.mcsHcdPrototype,HcdRuntimeController,112,52,8,0,38,20,5,4,1,4
+"java (3) (Nov 14, 2016 10:41:01 AM)/MCSHCD-Prototype/src/main/java",com.tmt.tcs.mcs.mcsHcdPrototype,TcsCommandListener,90,360,19,23,19,95,16,14,1,7
+"java (3) (Nov 14, 2016 10:41:01 AM)/MCSHCD-Prototype/src/main/java",com.tmt.tcs.mcs.mcsHcdPrototype,StatusCodes,21,79,0,0,1,15,2,2,2,2
+"java (3) (Nov 14, 2016 10:41:01 AM)/MCSHCD-Prototype/src/main/java",com.tmt.tcs.mcs.mcsHcdPrototype,McsEventListeningProvider,40,317,13,13,8,81,10,12,0,9
+"java (3) (Nov 14, 2016 10:41:01 AM)/MCSHCD-Prototype/src/main/java",com.tmt.tcs.mcs.mcsHcdPrototype,CommandExecutor,186,583,39,31,53,160,31,23,0,15
+"java (3) (Nov 14, 2016 10:41:01 AM)/MCSHCD-Prototype/src/main/java",com.tmt.tcs.mcs.mcsHcdPrototype,OperationResult,0,21,0,0,0,8,0,4,0,4
+"java (3) (Nov 14, 2016 10:41:01 AM)/MCSHCD-Prototype/src/main/java",com.tmt.tcs.mcs.mcsToTcsEvents,McsEvent,28,39,7,1,3,11,5,1,1,1
+"java (3) (Nov 14, 2016 10:41:01 AM)/MCSHCD-Prototype/src/main/java",com.tmt.tcs.mcs.mcsToTcsEvents,CurrentPositionEvent,0,5,0,0,0,2,0,1,0,1

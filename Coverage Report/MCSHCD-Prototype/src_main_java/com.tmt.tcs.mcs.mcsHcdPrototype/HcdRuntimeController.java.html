@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../../.resources/report.gif" type="image/gif"/><title>HcdRuntimeController.java</title><link rel="stylesheet" href="../../../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=2;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../../.sessions.html" class="el_session">Sessions</a></span><a href="../../../index.html" class="el_report">java (3) (Nov 14, 2016 10:41:01 AM)</a> &gt; <a href="../../index.html" class="el_group">MCSHCD-Prototype</a> &gt; <a href="../index.html" class="el_bundle">src/main/java</a> &gt; <a href="index.source.html" class="el_package">com.tmt.tcs.mcs.mcsHcdPrototype</a> &gt; <span class="el_source">HcdRuntimeController.java</span></div><h1>HcdRuntimeController.java</h1><pre class="source lang-java linenums">package com.tmt.tcs.mcs.mcsHcdPrototype;
+
+import org.zeromq.ZMQ;
+
+import java.util.logging.Logger;
+
+/**
+ * Runtime container for all the HCD components.
+ * The container is responsible for instantiating all the components,
+ * control the sequence of execution between them and maintain its lifecycle.
+ * @author vkhairnar.
+ */
+public final class HcdRuntimeController implements Runnable {
+  
+  /**
+   * Logger instance.
+   */
+<span class="fc" id="L18">  private static final Logger logger = Logger</span>
+<span class="fc" id="L19">      .getLogger(HcdRuntimeController.class.getName());  </span>
+  
+  /**
+   * Instance of {@link CommandListener}, listening to commands from MCS assembly.
+   */
+<span class="fc" id="L24">  private CommandListener cmdListener = null;</span>
+  
+  /**
+   * Instance of {@link EventListener}, listening to events from MCS assembly.
+   */
+<span class="fc" id="L29">  private EventListener evtListener = null;</span>
+  
+  /**
+   * Instance of {@link EventPublisher}, publishing mcs events to mcs assembly.
+   */
+<span class="fc" id="L34">  private EventPublisher evtPublisher = null;</span>
+      
+  /**
+   * Instance of {@link McsEventListener}, listening to mcs events.
+   */
+<span class="fc" id="L39">  private McsEventListener mcsListener = null;</span>
+  
+  /**
+   * Flag to exit from run.
+   */
+<span class="fc" id="L44">  private volatile boolean proceed = true;</span>
+  
+  /**
+   * Flag represents if MCS is in following state.
+   */
+<span class="fc" id="L49">  private boolean isFollowing = false;</span>
+  
+  /**
+   * Poll time for checking commands, events to be executed
+   * from MCS Assembly and check for events from MCS.
+   */
+<span class="fc" id="L55">  private long pollTime = 10;</span>
+        
+  /**
+   * Initializes new instance of {@link HcdRuntimeController}.   
+   */
+<span class="fc" id="L60">  public HcdRuntimeController() {</span>
+<span class="fc" id="L61">    cmdListener = TcsCommandListener.getInstance();</span>
+<span class="fc" id="L62">    evtListener = TcsEventListener.getInstance();</span>
+<span class="fc" id="L63">    evtPublisher = TcsEventPublisher.getInstance();</span>
+<span class="fc" id="L64">    mcsListener = McsEventListeningProvider.getInstance();        </span>
+    
+<span class="fc" id="L66">  }</span>
+  
+  /**
+   * Report state of MCS.
+   * @param isFollowing notifies if mcs is in following state or not.
+   */
+  public void setState(boolean isFollowing) {
+<span class="fc" id="L73">    this.isFollowing = isFollowing;</span>
+<span class="fc" id="L74">    pollTime = 10;</span>
+<span class="fc" id="L75">  }</span>
+  
+  /**
+   * Exits the run method.
+   */
+  public void stop() {
+<span class="fc" id="L81">    proceed = false;</span>
+<span class="fc" id="L82">  }    </span>
+  
+  /**
+   * Provides implementation for controlling various HCD components.
+   */
+  public void run() {
+    // TODO Auto-generated method stub
+<span class="nc" id="L89">    logger.info(&quot;run method called.&quot;);   </span>
+    //initialize all components first
+<span class="nc" id="L91">    ZMQ.Context context = ZMQ.context(1);</span>
+<span class="nc" id="L92">    CommandExecutor.getInstance().setContext(context);</span>
+<span class="nc" id="L93">    McsEventListeningProvider.getInstance().setContext(context);</span>
+<span class="nc" id="L94">    TcsCommandListener.getInstance().setCallback(this);</span>
+    
+    //call init
+<span class="nc" id="L97">    CommandExecutor.getInstance().init();</span>
+<span class="nc" id="L98">    cmdListener.init();</span>
+<span class="nc" id="L99">    evtListener.init();</span>
+<span class="nc" id="L100">    evtPublisher.init();</span>
+<span class="nc" id="L101">    mcsListener.init();</span>
+    
+    //call start
+<span class="nc" id="L104">    CommandExecutor.getInstance().start();</span>
+<span class="nc" id="L105">    cmdListener.start();</span>
+<span class="nc" id="L106">    evtListener.start();</span>
+<span class="nc" id="L107">    evtPublisher.start();</span>
+<span class="nc" id="L108">    mcsListener.start();</span>
+
+<span class="nc bnc" id="L110" title="All 4 branches missed.">    while ((!Thread.currentThread().isInterrupted()) &amp;&amp; proceed) {      </span>
+      // Send position demand
+<span class="nc" id="L112">      logger.info(&quot;calling listenforHcdCommand.&quot;);</span>
+<span class="nc" id="L113">      cmdListener.listenforHcdCommand();</span>
+<span class="nc bnc" id="L114" title="All 2 branches missed.">      if (isFollowing) {</span>
+<span class="nc" id="L115">        logger.info(&quot;calling listenforEvents.&quot;);</span>
+<span class="nc" id="L116">        evtListener.listenforEvents();  </span>
+      }
+      
+<span class="nc" id="L119">      logger.info(&quot;calling listenforMcsEvent.&quot;);</span>
+<span class="nc" id="L120">      mcsListener.listenforMcsEvent();      </span>
+<span class="nc" id="L121">      logger.info(&quot;calling publishEvent.&quot;);</span>
+<span class="nc" id="L122">      evtPublisher.publishEvent(null);</span>
+<span class="nc" id="L123">      logger.info(&quot;Going into sleep.&quot;);</span>
+      try {
+<span class="nc" id="L125">        Thread.sleep(pollTime);</span>
+<span class="nc" id="L126">      } catch (InterruptedException ex) {</span>
+        // TODO Auto-generated catch block
+<span class="nc" id="L128">        ex.printStackTrace();</span>
+<span class="nc" id="L129">        logger.severe(ex.getMessage());</span>
+      }
+
+    }
+    
+<span class="nc" id="L134">    cmdListener.stop();</span>
+<span class="nc" id="L135">    evtListener.stop();</span>
+<span class="nc" id="L136">    evtPublisher.stop();</span>
+<span class="nc" id="L137">    mcsListener.stop();</span>
+<span class="nc" id="L138">    CommandExecutor.getInstance().stop();</span>
+    
+<span class="nc bnc" id="L140" title="All 2 branches missed.">    if (context != null) {</span>
+<span class="nc" id="L141">      context.term();</span>
+    }
+
+<span class="nc" id="L144">  }</span>
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.6.201602180812</span>java (3) (Nov 14, 2016 10:41:01 AM)</div></body></html>

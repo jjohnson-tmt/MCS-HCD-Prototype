@@ -1,0 +1,589 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../../.resources/report.gif" type="image/gif"/><title>CommandExecutor.java</title><link rel="stylesheet" href="../../../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=2;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../../.sessions.html" class="el_session">Sessions</a></span><a href="../../../index.html" class="el_report">java (3) (Nov 14, 2016 10:41:01 AM)</a> &gt; <a href="../../index.html" class="el_group">MCSHCD-Prototype</a> &gt; <a href="../index.html" class="el_bundle">src/main/java</a> &gt; <a href="index.source.html" class="el_package">com.tmt.tcs.mcs.mcsHcdPrototype</a> &gt; <span class="el_source">CommandExecutor.java</span></div><h1>CommandExecutor.java</h1><pre class="source lang-java linenums">package com.tmt.tcs.mcs.mcsHcdPrototype;
+
+import com.tmt.tcs.mcs.mcsCommands.McsCommand;
+import com.tmt.tcs.mcs.mcsCommands.McsFollowCommand;
+import com.tmt.tcs.mcs.mcsCommands.McsLifecycleCommand;
+import com.tmt.tcs.mcs.protos.TcsToMcsCommandProtos.CommandResponse;
+import com.tmt.tcs.mcs.protos.TcsToMcsCommandProtos.FollowCommand.Axes;
+import com.tmt.tcs.mcs.protos.TcsToMcsCommandProtos.TransitionType;
+import com.tmt.tcs.mcs.tcsToMcsEvents.PositionDemandEvent;
+
+import org.zeromq.ZMQ;
+
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.Properties;
+import java.util.logging.FileHandler;
+import java.util.logging.Logger;
+
+/**
+ * Class contains implementation for sending commands and
+ * events on ZeroMQ. This class contains implementation for the communication layer. It is
+ * responsible for setting up ZeroMQ sockets for communication.
+ */
+final class CommandExecutor {
+  /**
+   * Reference for single instance of class.
+   */
+<span class="fc" id="L29">  private static CommandExecutor cmdExecutor = null;</span>
+
+  /**
+   * Address string for push socket.
+   */
+<span class="fc" id="L34">  private String pushAddress = &quot;tcp://localhost:&quot;;</span>
+  
+  /**
+   * Key for reading push url from config.
+   */
+  private static final String PUSH_URL_KEY = &quot;pushurl&quot;;
+
+  /**
+   * Address string for pull socket.
+   */
+<span class="fc" id="L44">  private String pullAddress = &quot;tcp://localhost:&quot;;</span>
+  
+  /**
+   * Key for reading pull url from config.
+   */
+  private static final String PULL_URL_KEY = &quot;pullurl&quot;;
+
+  /**
+   * Address string for pub socket.
+   */
+<span class="fc" id="L54">  private String pubAddress = &quot;tcp://localhost:&quot;;  </span>
+  
+  /**
+   * Key for reading pub url from config.
+   */
+  private static final String PUB_URL_KEY = &quot;puburl&quot;;
+
+  /**
+   * ZeroMQ context.
+   */
+<span class="fc" id="L64">  private ZMQ.Context context = null;</span>
+
+  /**
+   * ZeroMQ pull socket.
+   */
+<span class="fc" id="L69">  private ZMQ.Socket pullSocket = null;</span>
+
+  /**
+   * ZeroMQ push socket.
+   */
+<span class="fc" id="L74">  private ZMQ.Socket pushSocket = null;</span>
+
+  /**
+   * ZeroMQ publisher socket.
+   */
+<span class="fc" id="L79">  private ZMQ.Socket publisher = null;</span>
+  
+  /**
+   * error_state value in response in case of success.
+   */
+<span class="fc" id="L84">  private String okResponse = null;</span>
+
+  /**
+   * error_state value in response in case of failure.
+   */
+<span class="fc" id="L89">  private String errorResponse = null;</span>
+
+  /**
+   * Name of log file.
+   */
+<span class="fc" id="L94">  private String logFileName = null;</span>
+
+  /**
+   * Receive timeout in miliseconds.
+   */
+<span class="fc" id="L99">  private int receiveTimeout = 5000;</span>
+
+  /**
+   * Config property name for receive timeout value in miliseconds.
+   */
+  private static final String RECEIVE_TIMEOUT_KEY = &quot;receivetimeout&quot;;  
+
+  /**
+   * Config property name for error response identifier.
+   */
+  private static final String ERROR_RESPONSE_VALUE_KEY = &quot;errorresponsevalue&quot;;
+
+  /**
+   * Config property name for ok response identifier.
+   */
+  private static final String OK_RESPONSE_KEY = &quot;okresponse&quot;;
+  
+  /**
+   * Config property name for ZeroMQ publish port.
+   */
+  private static final String PUBLISH_PORT_KEY = &quot;publishport&quot;;
+
+  /**
+   * Config property name for ZeroMQ pull port.
+   */
+  private static final String PULL_PORT_KEY = &quot;pullport&quot;;
+
+  /**
+   * Config property name for ZeroMQ push port.
+   */
+  private static final String PUSH_PORT_KEY = &quot;pushport&quot;;
+
+  /**
+   * Config property name for log file.
+   */
+  private static final String LOG_FILE_NAME_KEY = &quot;logfile&quot;;
+
+  /**
+   * Error info string in case of command send time out.
+   */
+  private static final String SEND_TIMEOUT_ERROR_INFO = &quot;Send timeout&quot;;
+
+  /**
+   * Synchronization object to ensure only 1 thread enters the
+   * sendpositiondemands block.
+   */
+<span class="fc" id="L145">  private final Object positionDemandSync = new Object();</span>
+
+  /**
+   * Logger instance.
+   */
+<span class="fc" id="L150">  private static final Logger logger = Logger.getLogger(CommandExecutor.class.getName());</span>
+
+  /**
+   * Flag indicates if the object is cleaned up, if so caller should get a new
+   * instance by calling getInstance. After getting new instance caller should
+   * also follow init() and start() sequence.
+   */
+<span class="fc" id="L157">  private boolean isCleaned = false;  </span>
+
+  /**
+   * Constructor for the class.
+   */
+<span class="fc" id="L162">  private CommandExecutor() {</span>
+
+<span class="fc" id="L164">  }  </span>
+  
+  /**
+   * Setting zeromq context.
+   * @param context ZeroMQ context required for scoket creation.
+   */
+  void setContext(ZMQ.Context context) {
+<span class="fc" id="L171">    this.context = context;</span>
+<span class="fc" id="L172">  }</span>
+
+  /**
+   * Provides initialization for the MCS HCD.
+   */
+  void init() {
+<span class="fc" id="L178">    logger.info(&quot;Initializing HCD&quot;);</span>
+    // Read configuration
+<span class="fc" id="L180">    Properties prop = new Properties();</span>
+
+<span class="fc" id="L182">    try (InputStream input = new FileInputStream(&quot;config.properties&quot;)) {      </span>
+      // load a properties file
+<span class="fc" id="L184">      prop.load(input);</span>
+
+      // Read and assign variables
+<span class="fc" id="L187">      receiveTimeout = Integer.parseInt(prop.getProperty(RECEIVE_TIMEOUT_KEY));     </span>
+            
+<span class="fc" id="L189">      errorResponse = prop.getProperty(ERROR_RESPONSE_VALUE_KEY);</span>
+<span class="fc" id="L190">      okResponse = prop.getProperty(OK_RESPONSE_KEY);      </span>
+            
+<span class="fc" id="L192">      logFileName = prop.getProperty(LOG_FILE_NAME_KEY);</span>
+
+      // Logger initialization
+      try {
+
+<span class="fc" id="L197">        logger.addHandler(new FileHandler(logFileName));</span>
+<span class="pc" id="L198">      } catch (SecurityException ex) {</span>
+        // TODO Auto-generated catch block
+<span class="nc" id="L200">        ex.printStackTrace();</span>
+<span class="nc" id="L201">      } catch (IOException ex) {</span>
+        // TODO Auto-generated catch block
+<span class="nc" id="L203">        ex.printStackTrace();</span>
+      }
+<span class="fc" id="L205">      logger.info(&quot;config.properties loaded successfully&quot;);      </span>
+
+<span class="fc" id="L207">      pubAddress = prop.getProperty(PUB_URL_KEY);</span>
+<span class="fc" id="L208">      StringBuilder builder = new StringBuilder(pubAddress);</span>
+<span class="fc" id="L209">      pubAddress = builder.append(prop.getProperty(PUBLISH_PORT_KEY)).toString();</span>
+
+<span class="fc" id="L211">      pullAddress = prop.getProperty(PULL_URL_KEY);</span>
+<span class="fc" id="L212">      builder = new StringBuilder(pullAddress);</span>
+<span class="fc" id="L213">      pullAddress = builder.append(prop.getProperty(PULL_PORT_KEY)).toString();</span>
+
+<span class="fc" id="L215">      pushAddress = prop.getProperty(PUSH_URL_KEY);</span>
+<span class="fc" id="L216">      builder = new StringBuilder(pushAddress);</span>
+<span class="fc" id="L217">      pushAddress = builder.append(prop.getProperty(PUSH_PORT_KEY)).toString();</span>
+
+<span class="fc" id="L219">      logger.info(&quot;Read and assigned properties successfully&quot;);</span>
+<span class="pc bpc" id="L220" title="7 of 8 branches missed.">    } catch (IOException e1) {</span>
+<span class="nc" id="L221">      e1.printStackTrace();</span>
+<span class="nc" id="L222">      logger.severe(e1.getMessage());</span>
+    }   
+
+<span class="fc" id="L225">    pullSocket = context.socket(ZMQ.PULL);</span>
+<span class="fc" id="L226">    pullSocket.setReceiveTimeOut(receiveTimeout);</span>
+
+<span class="fc" id="L228">    pushSocket = context.socket(ZMQ.PUSH);</span>
+<span class="fc" id="L229">    pushSocket.setSendTimeOut(receiveTimeout);</span>
+
+<span class="fc" id="L231">    publisher = context.socket(ZMQ.PUB);    </span>
+<span class="fc" id="L232">    logger.info(&quot;Initialized ZeroMQ context and sockets&quot;);</span>
+<span class="fc" id="L233">  }</span>
+
+  /**
+   * Create push, pull, pub, sub socket connections. Bind sockets and start
+   * thread to listen for MCS events.
+   */
+  void start() {
+
+<span class="fc" id="L241">    logger.info(&quot;MCS HCD start called&quot;);</span>
+<span class="pc bpc" id="L242" title="1 of 2 branches missed.">    if (pushSocket != null) {</span>
+<span class="fc" id="L243">      pushSocket.bind(pushAddress);</span>
+    }
+
+<span class="pc bpc" id="L246" title="1 of 2 branches missed.">    if (pullSocket != null) {</span>
+<span class="fc" id="L247">      pullSocket.connect(pullAddress);</span>
+    }
+
+<span class="pc bpc" id="L250" title="1 of 2 branches missed.">    if (publisher != null) {</span>
+<span class="fc" id="L251">      publisher.bind(pubAddress);      </span>
+    }
+
+<span class="fc" id="L254">    logger.info(&quot;Socket binding and connection completed&quot;);        </span>
+<span class="fc" id="L255">  }</span>
+
+  /**
+   * Returns if the object is cleaned up, if so caller should get a new instance
+   * by calling getInstance. Caller should also follow init() and start()
+   * sequence.
+   */
+  boolean isCleanedUp() {
+<span class="fc" id="L263">    logger.info(&quot;MCS HCD isCleanedUP called&quot;);</span>
+<span class="fc" id="L264">    return isCleaned;</span>
+  }
+
+  /**
+   * Provides cleanup for MCS HCD.
+   */
+  void stop() {
+<span class="fc" id="L271">    logger.info(&quot;MCS HCD stop called&quot;);    </span>
+
+    // ZeroMQ cleanup
+<span class="fc bfc" id="L274" title="All 2 branches covered.">    if (pullSocket != null) {             </span>
+      //Set linger to 0 for dropping pending connects and sends otherwise context.term() will hang.
+<span class="fc" id="L276">      pullSocket.setLinger(0);</span>
+<span class="fc" id="L277">      pullSocket.disconnect(pullAddress);</span>
+<span class="fc" id="L278">      pullSocket.close();</span>
+    }
+
+<span class="fc bfc" id="L281" title="All 2 branches covered.">    if (pushSocket != null) {</span>
+      //Set linger to 0 for dropping pending connects and sends otherwise context.term() will hang.
+<span class="fc" id="L283">      pushSocket.setLinger(0);</span>
+<span class="fc" id="L284">      pushSocket.unbind(pushAddress);</span>
+<span class="fc" id="L285">      pushSocket.close();</span>
+    }
+
+<span class="fc bfc" id="L288" title="All 2 branches covered.">    if (publisher != null) {</span>
+      //Set linger to 0 for dropping pending connects and sends otherwise context.term() will hang.
+<span class="fc" id="L290">      publisher.setLinger(0);</span>
+<span class="fc" id="L291">      publisher.unbind(pubAddress);</span>
+<span class="fc" id="L292">      publisher.close();</span>
+    }        
+
+<span class="fc" id="L295">    logger.info(&quot;ZeroMQ cleanup completed&quot;);</span>
+<span class="fc" id="L296">    cmdExecutor = null;</span>
+<span class="fc" id="L297">    isCleaned = true;</span>
+<span class="fc" id="L298">  }</span>
+  
+  /**
+   * Sends command packet on ZeroMq and returns status.
+   * @param command object of type {@link McsCommand} representing the command to be sent to MCS.   
+   * @return object of type OperationResult.
+   *     It contains status of operation and description in case of error.
+   */
+  private OperationResult sendCommand(McsCommand command) {
+<span class="fc" id="L307">    logger.info(&quot;MCS HCD sendCommand called&quot;);</span>
+<span class="pc bpc" id="L308" title="1 of 2 branches missed.">    if (command == null) {</span>
+<span class="nc" id="L309">      return null;</span>
+    }
+
+    // Clean up anything pending on the pull socket
+<span class="fc" id="L313">    byte[] garbage = pullSocket.recv(ZMQ.DONTWAIT);</span>
+<span class="pc bpc" id="L314" title="1 of 2 branches missed.">    if (garbage != null) {</span>
+<span class="nc" id="L315">      garbage = null;</span>
+<span class="nc bnc" id="L316" title="All 2 branches missed.">      while (pullSocket.hasReceiveMore()) {</span>
+<span class="nc" id="L317">        garbage = pullSocket.recv(ZMQ.DONTWAIT);</span>
+<span class="nc" id="L318">        garbage = null;</span>
+      }
+    }
+
+    // send command
+<span class="fc" id="L323">    boolean status = false;</span>
+<span class="fc" id="L324">    logger.info(&quot;Sending command idedntifier on ZeroMQ&quot;);</span>
+<span class="fc" id="L325">    status = pushSocket.sendMore(command.getCommandName());    </span>
+
+<span class="pc bpc" id="L327" title="1 of 2 branches missed.">    if (status) {</span>
+<span class="fc" id="L328">      logger.info(&quot;Command identifier sent successfully&quot;);</span>
+<span class="fc" id="L329">      logger.info(&quot;Sending command data&quot;);</span>
+<span class="fc" id="L330">      status = pushSocket.send(command.encode(), ZMQ.NOBLOCK);</span>
+<span class="pc bpc" id="L331" title="1 of 2 branches missed.">      if (status) {</span>
+<span class="fc" id="L332">        return new OperationResult(okResponse, 0.0, StatusCodes.Success);        </span>
+      } else {
+<span class="nc" id="L334">        logger.severe(&quot;MCS command send time out&quot;);        </span>
+        
+<span class="nc" id="L336">        return new OperationResult(SEND_TIMEOUT_ERROR_INFO, 0.0, StatusCodes.Timeout);</span>
+      }
+      
+    } else {
+<span class="nc" id="L340">      return new OperationResult(SEND_TIMEOUT_ERROR_INFO, 0.0, StatusCodes.Timeout);</span>
+    }
+  }
+  
+  /**
+   * Reads response packet from MCS on PULL socket.
+   * Validates that the response is of the expected type.
+   * @param messageName expected response type.
+   * @return response packet as byte[] if the response is of the expected type or null.
+   */
+  private byte[] readCommandResponse(String messageName) {
+<span class="fc" id="L351">    logger.info(&quot;readCommandResponse called for command: &quot; + messageName);</span>
+<span class="fc" id="L352">    byte[] responsepacket = null;</span>
+<span class="fc" id="L353">    String responseName = pullSocket.recvStr(ZMQ.DONTWAIT);</span>
+<span class="pc bpc" id="L354" title="1 of 4 branches missed.">    if ((responseName != null) &amp;&amp; (responseName.compareTo(messageName) != 0)) {</span>
+      // Response does not belong to the command sent
+<span class="nc" id="L356">      logger.info(&quot;Response received but is of type: &quot; + responseName);</span>
+<span class="nc" id="L357">      return null;</span>
+<span class="fc bfc" id="L358" title="All 2 branches covered.">    } else if (responseName == null) {</span>
+      // Not yet received
+<span class="fc" id="L360">      logger.info(&quot;Response not yet received&quot;);</span>
+<span class="fc" id="L361">      return null;</span>
+    }
+    
+<span class="fc" id="L364">    logger.info(&quot;Response received for the expected type&quot;);</span>
+    // Read 2nd part of response
+<span class="pc bpc" id="L366" title="1 of 2 branches missed.">    if (pullSocket.hasReceiveMore()) {</span>
+<span class="fc" id="L367">      responsepacket = pullSocket.recv(ZMQ.DONTWAIT);</span>
+    }
+    
+<span class="fc" id="L370">    return responsepacket;</span>
+  }
+  
+  /**
+   * Sends lifecycle command to MCS on ZeroMQ
+   * @param transition parameter of type {@link TransitionType} enum.
+   * @return status of operation with description in case of error {@link OperationResult}.
+   */
+  synchronized OperationResult sendLifecycleCommand(TransitionType transition) {
+<span class="fc" id="L379">    logger.info(&quot;sendLifecycleCommand called&quot;);</span>
+    // Create command object
+<span class="fc" id="L381">    McsLifecycleCommand command = McsLifecycleCommand.getInstance();   </span>
+<span class="fc" id="L382">    command.setTransition(transition);</span>
+<span class="fc" id="L383">    logger.info(&quot;calling sendCommand&quot;);</span>
+<span class="fc" id="L384">    OperationResult result = sendCommand(command);</span>
+<span class="fc" id="L385">    return result;</span>
+  }
+  
+  /**
+   * Reads MCS response for lifecycle command.
+   * @return null in case the response is not yet received.
+   *     If the response is received, 
+   *     parse the response and return status, 
+   *     error info as {@link OperationResult}.
+   */
+  synchronized OperationResult readLifecycleCommandResponse() {
+<span class="fc" id="L396">    logger.info(&quot;readLIfecycleCommandResponse called&quot;);</span>
+    // Get command object
+<span class="fc" id="L398">    McsLifecycleCommand command = McsLifecycleCommand.getInstance();</span>
+    
+<span class="fc" id="L400">    byte[] responsePacket = readCommandResponse(command.getCommandName());</span>
+    
+<span class="fc bfc" id="L402" title="All 2 branches covered.">    if (responsePacket != null) {</span>
+<span class="fc" id="L403">      logger.info(&quot;Response received&quot;);</span>
+           
+      //Parse response
+<span class="fc" id="L406">      CommandResponse commandResponse = null;                      </span>
+<span class="fc" id="L407">      logger.info(&quot;Response received&quot;);</span>
+<span class="fc" id="L408">      commandResponse = command.decode(responsePacket);        </span>
+            
+<span class="pc bpc" id="L410" title="1 of 2 branches missed.">      if (commandResponse != null) {</span>
+<span class="fc" id="L411">        logger.info(&quot;Response parsed successfully&quot;);</span>
+<span class="pc bpc" id="L412" title="1 of 2 branches missed.">        if (commandResponse.getErrorState().compareToIgnoreCase(okResponse) == 0) {</span>
+          // Success
+<span class="fc" id="L414">          logger.info(&quot;Response error state is ok&quot;);</span>
+<span class="fc" id="L415">          return new OperationResult(okResponse, commandResponse.getTime(),</span>
+<span class="fc" id="L416">              StatusCodes.Success);</span>
+<span class="nc bnc" id="L417" title="All 2 branches missed.">        } else if (commandResponse.getErrorState().compareToIgnoreCase(</span>
+<span class="nc" id="L418">            errorResponse) == 0) {</span>
+          // Failure
+<span class="nc" id="L420">          StatusCodes code = StatusCodes.IllegalState;</span>
+<span class="nc" id="L421">          logger.info(&quot;Response error state &quot; + code.name());</span>
+<span class="nc bnc" id="L422" title="All 6 branches missed.">          switch (commandResponse.getCmdError()) {          </span>
+            case BUSY:
+<span class="nc" id="L424">              code = StatusCodes.Busy;</span>
+<span class="nc" id="L425">              break;</span>
+            case FAILED:
+<span class="nc" id="L427">              code = StatusCodes.Failure;</span>
+<span class="nc" id="L428">              break;</span>
+            case ILLEGAL_STATE:
+<span class="nc" id="L430">              code = StatusCodes.IllegalState;</span>
+<span class="nc" id="L431">              break;</span>
+            case OUT_OF_RANGE:
+<span class="nc" id="L433">              code = StatusCodes.OutofRange;</span>
+<span class="nc" id="L434">              break;</span>
+            case OUT_OF_SPEC:
+<span class="nc" id="L436">              code = StatusCodes.OutofSpec;</span>
+<span class="nc" id="L437">              break;</span>
+            default:
+              break;
+          }
+
+<span class="nc" id="L442">          return new OperationResult(commandResponse.getErrorInfo(),</span>
+<span class="nc" id="L443">              commandResponse.getTime(), code);</span>
+        } else {
+<span class="nc" id="L445">          return null;</span>
+        }
+      }
+<span class="nc" id="L448">      return null;</span>
+
+    } else {
+<span class="fc" id="L451">      logger.info(&quot;Response not yet received&quot;);</span>
+<span class="fc" id="L452">      return null;</span>
+    }
+  }
+  
+  /**
+   * Sends follow command for the specified axis to MCS and returns status.
+   * @param axes Parameter of type {@link Axes} specifying the axis
+   *      that needs to be put in the following state.
+   * @return object of type {@link OperationResult}, 
+   *     containing status and description text in case of error.
+   */
+  synchronized OperationResult sendFollowCommand(Axes axes) {
+<span class="fc" id="L464">    logger.info(&quot;sendFollowCommand called&quot;);</span>
+    // Create command object
+<span class="fc" id="L466">    McsFollowCommand command = McsFollowCommand.getInstance(); </span>
+<span class="fc" id="L467">    command.setAxes(axes);</span>
+        
+<span class="fc" id="L469">    logger.info(&quot;calling sendCommand&quot;);</span>
+<span class="fc" id="L470">    OperationResult result = sendCommand(command);</span>
+<span class="fc" id="L471">    return result;</span>
+  }
+  
+  /**
+   * Reads MCS response for follow command.
+   * @return null in case the response is not yet received.
+   *     If the response is received, parse the response and return status, 
+   *     error info in form of {@link OperationResult}.
+   */
+  synchronized OperationResult readFollowCommandResponse() {
+<span class="fc" id="L481">    logger.info(&quot;readFollowCommandResponse called&quot;);</span>
+    // Create command object
+<span class="fc" id="L483">    McsFollowCommand command = McsFollowCommand.getInstance();</span>
+<span class="fc" id="L484">    byte[] responsePacket = readCommandResponse(command.getCommandName());</span>
+    
+<span class="fc bfc" id="L486" title="All 2 branches covered.">    if (responsePacket != null) {</span>
+<span class="fc" id="L487">      logger.info(&quot;Response received&quot;);</span>
+      
+      //Parse response
+<span class="fc" id="L490">      CommandResponse commandResponse = null;                      </span>
+<span class="fc" id="L491">      logger.info(&quot;Response received&quot;);</span>
+<span class="fc" id="L492">      commandResponse = command.decode(responsePacket);        </span>
+            
+<span class="pc bpc" id="L494" title="1 of 2 branches missed.">      if (commandResponse != null) {</span>
+<span class="fc" id="L495">        logger.info(&quot;Response parsed successfully&quot;);</span>
+<span class="pc bpc" id="L496" title="1 of 2 branches missed.">        if (commandResponse.getErrorState().compareToIgnoreCase(okResponse) == 0) {</span>
+          // Success
+<span class="fc" id="L498">          logger.info(&quot;Response error state is ok&quot;);</span>
+<span class="fc" id="L499">          return new OperationResult(okResponse, commandResponse.getTime(),</span>
+<span class="fc" id="L500">              StatusCodes.Success);</span>
+<span class="nc bnc" id="L501" title="All 2 branches missed.">        } else if (commandResponse.getErrorState().compareToIgnoreCase(</span>
+<span class="nc" id="L502">            errorResponse) == 0) {</span>
+          // Failure
+<span class="nc" id="L504">          StatusCodes code = StatusCodes.IllegalState;</span>
+<span class="nc" id="L505">          logger.info(&quot;Response error state &quot; + code.name());</span>
+<span class="nc bnc" id="L506" title="All 6 branches missed.">          switch (commandResponse.getCmdError()) {          </span>
+            case BUSY:
+<span class="nc" id="L508">              code = StatusCodes.Busy;</span>
+<span class="nc" id="L509">              break;</span>
+            case FAILED:
+<span class="nc" id="L511">              code = StatusCodes.Failure;</span>
+<span class="nc" id="L512">              break;</span>
+            case ILLEGAL_STATE:
+<span class="nc" id="L514">              code = StatusCodes.IllegalState;</span>
+<span class="nc" id="L515">              break;</span>
+            case OUT_OF_RANGE:
+<span class="nc" id="L517">              code = StatusCodes.OutofRange;</span>
+<span class="nc" id="L518">              break;</span>
+            case OUT_OF_SPEC:
+<span class="nc" id="L520">              code = StatusCodes.OutofSpec;</span>
+<span class="nc" id="L521">              break;</span>
+            default:
+              break;
+          }
+
+<span class="nc" id="L526">          return new OperationResult(commandResponse.getErrorInfo(),</span>
+<span class="nc" id="L527">              commandResponse.getTime(), code);</span>
+        } else {
+<span class="nc" id="L529">          return null;</span>
+        }
+      }
+<span class="nc" id="L532">      return null;</span>
+
+    } else {
+<span class="fc" id="L535">      logger.info(&quot;Response not yet received&quot;);</span>
+<span class="fc" id="L536">      return null;</span>
+    }
+  }
+
+  /**
+   * Sends position demands to MCS on the pub socket.
+   * 
+   * @param az
+   *          azimuth demand in double.
+   * @param el
+   *          elevation demand in double.
+   * @param time
+   *          timestamp for the demand in double.
+   * @return status of operation, true for success and false for failure.
+   */
+  boolean sendPositionDemands(double az, double el, double time) {
+<span class="fc" id="L552">    logger.info(&quot;sendPositionDemands called&quot;);</span>
+<span class="fc" id="L553">    boolean status = false;</span>
+<span class="pc" id="L554">    synchronized (positionDemandSync) {</span>
+      // Create command object
+<span class="fc" id="L556">      PositionDemandEvent event = PositionDemandEvent.getInstance();</span>
+<span class="fc" id="L557">      event.setAzimuth(az);</span>
+<span class="fc" id="L558">      event.setElevation(el);</span>
+<span class="fc" id="L559">      event.setTime(time);</span>
+      // Send on ZeroMQ
+      // logger.info(&quot;sending event topic&quot;);
+      // publisher.sendMore(tcsEventsTopic);
+<span class="fc" id="L563">      logger.info(&quot;sending event identifier&quot;);</span>
+
+<span class="fc" id="L565">      status = publisher.sendMore(event.getEventName());</span>
+<span class="pc bpc" id="L566" title="1 of 2 branches missed.">      if (status) {</span>
+<span class="fc" id="L567">        logger.info(&quot;sending event data&quot;);</span>
+<span class="fc" id="L568">        status = publisher.send(event.encode());  </span>
+      }
+      
+    }
+
+<span class="fc" id="L573">    return status;</span>
+  }
+
+  /**
+   * Gets instance of CommandExecutor.
+   * 
+   * @return instance of CommandExecutor class.
+   */
+  static CommandExecutor getInstance() {
+<span class="fc bfc" id="L582" title="All 2 branches covered.">    if (cmdExecutor == null) {</span>
+<span class="fc" id="L583">      cmdExecutor = new CommandExecutor();</span>
+    }
+
+<span class="fc" id="L586">    return cmdExecutor;</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.6.201602180812</span>java (3) (Nov 14, 2016 10:41:01 AM)</div></body></html>

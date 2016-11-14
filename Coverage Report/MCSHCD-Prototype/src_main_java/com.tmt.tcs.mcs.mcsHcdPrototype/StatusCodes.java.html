@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../../.resources/report.gif" type="image/gif"/><title>StatusCodes.java</title><link rel="stylesheet" href="../../../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=2;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../../.sessions.html" class="el_session">Sessions</a></span><a href="../../../index.html" class="el_report">java (3) (Nov 14, 2016 10:41:01 AM)</a> &gt; <a href="../../index.html" class="el_group">MCSHCD-Prototype</a> &gt; <a href="../index.html" class="el_bundle">src/main/java</a> &gt; <a href="index.source.html" class="el_package">com.tmt.tcs.mcs.mcsHcdPrototype</a> &gt; <span class="el_source">StatusCodes.java</span></div><h1>StatusCodes.java</h1><pre class="source lang-java linenums"><span class="nc" id="L1">package com.tmt.tcs.mcs.mcsHcdPrototype;</span>
+
+/**
+ * The enum represents possible status from MCS command operations.
+ * 
+ * @author E401581.
+ *
+ */
+<span class="fc" id="L9">enum StatusCodes {</span>
+<span class="fc" id="L10">    // Success</span>
+<span class="fc" id="L11">    Success,</span>
+
+<span class="fc" id="L13">    // Command not valid in current MCS state</span>
+<span class="fc" id="L14">    IllegalState,</span>
+
+<span class="fc" id="L16">    // MCS busy executing some other command</span>
+<span class="fc" id="L17">    Busy,</span>
+
+<span class="fc" id="L19">    // One or more parameters are out of range</span>
+<span class="fc" id="L20">    OutofRange,</span>
+
+<span class="fc" id="L22">    // MCS did not respond in time</span>
+<span class="fc" id="L23">    Timeout,</span>
+
+<span class="fc" id="L25">    // MCS failed to execute the command</span>
+<span class="fc" id="L26">    Failure,</span>
+
+<span class="fc" id="L28">    // The command or parameter is not supported</span>
+<span class="fc" id="L29">    OutofSpec</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.6.201602180812</span>java (3) (Nov 14, 2016 10:41:01 AM)</div></body></html>

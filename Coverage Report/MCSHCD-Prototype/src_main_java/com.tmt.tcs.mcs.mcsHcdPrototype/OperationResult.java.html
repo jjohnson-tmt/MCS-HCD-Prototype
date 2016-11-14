@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../../.resources/report.gif" type="image/gif"/><title>OperationResult.java</title><link rel="stylesheet" href="../../../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=2;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../../.sessions.html" class="el_session">Sessions</a></span><a href="../../../index.html" class="el_report">java (3) (Nov 14, 2016 10:41:01 AM)</a> &gt; <a href="../../index.html" class="el_group">MCSHCD-Prototype</a> &gt; <a href="../index.html" class="el_bundle">src/main/java</a> &gt; <a href="index.source.html" class="el_package">com.tmt.tcs.mcs.mcsHcdPrototype</a> &gt; <span class="el_source">OperationResult.java</span></div><h1>OperationResult.java</h1><pre class="source lang-java linenums">package com.tmt.tcs.mcs.mcsHcdPrototype;
+
+/**
+ * Represents return type for MCSHCD methods.
+ * 
+ * @author vkhairnar. Represents result for all MCS related operations.
+ */
+class OperationResult {
+  /**
+   * Contains error message returned by MCS in case of error.
+   */
+  private String errorInfo;
+
+  /**
+   * Contains TAI timestamp when the command was processed and response was
+   * generated at MCS.
+   */
+  private double timeWhenProcessed;
+
+  /**
+   * Contains command execution status returned by MCS.
+   */
+  private StatusCodes status;
+
+  /**
+   * Constructor for the class.
+   * 
+   * @param error
+   *            string error returned by MCS in error_state field of response.
+   * @param processedTime
+   *            TAI time returned by MCS in time field of response.
+   * @param code
+   *            One of the StatusCodes enum value.
+   */
+<span class="fc" id="L35">  OperationResult(String error, double processedTime, StatusCodes code) {</span>
+<span class="fc" id="L36">    errorInfo = error;</span>
+<span class="fc" id="L37">    timeWhenProcessed = processedTime;</span>
+<span class="fc" id="L38">    status = code;</span>
+<span class="fc" id="L39">  }</span>
+
+  /**
+   * Gets errorInfo as returned by MCS.
+   * 
+   * @return errorInfo as String.
+   */
+  public String getErrorInfo() {
+<span class="fc" id="L47">    return errorInfo;</span>
+  }
+
+  /**
+   * Gets timeWhenProcessed as returned by MCS.
+   * 
+   * @return time when processed by MCS as double.
+   */
+  public double getTimeWhenProcessed() {
+<span class="fc" id="L56">    return timeWhenProcessed;</span>
+  }
+
+  /**
+   * Gets status.
+   * 
+   * @return status codes for communication with MCS.
+   */
+  public StatusCodes getStatus() {
+<span class="fc" id="L65">    return status;</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.6.201602180812</span>java (3) (Nov 14, 2016 10:41:01 AM)</div></body></html>

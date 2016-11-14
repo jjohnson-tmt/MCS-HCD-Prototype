@@ -1,0 +1,257 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../../.resources/report.gif" type="image/gif"/><title>McsEventListeningProvider.java</title><link rel="stylesheet" href="../../../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=2;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../../.sessions.html" class="el_session">Sessions</a></span><a href="../../../index.html" class="el_report">java (3) (Nov 14, 2016 10:41:01 AM)</a> &gt; <a href="../../index.html" class="el_group">MCSHCD-Prototype</a> &gt; <a href="../index.html" class="el_bundle">src/main/java</a> &gt; <a href="index.source.html" class="el_package">com.tmt.tcs.mcs.mcsHcdPrototype</a> &gt; <span class="el_source">McsEventListeningProvider.java</span></div><h1>McsEventListeningProvider.java</h1><pre class="source lang-java linenums">package com.tmt.tcs.mcs.mcsHcdPrototype;
+
+import com.google.protobuf.InvalidProtocolBufferException;
+
+import com.tmt.tcs.mcs.mcsToTcsEvents.CurrentPositionEvent;
+import com.tmt.tcs.mcs.mcsToTcsEvents.McsEvent;
+import com.tmt.tcs.mcs.protos.TcsMcsEventsProtos.McsCurrentPositionEvent;
+
+import org.zeromq.ZMQ;
+
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.Properties;
+import java.util.logging.FileHandler;
+import java.util.logging.Logger;
+
+/**
+ * @author E401581.
+ *     {@link McsEventListener} implementation for reading mcs event from ZeroMQ SUB socket.
+ */
+final class McsEventListeningProvider implements McsEventListener {
+
+  /**
+   * Address string for sub socket.
+   */
+<span class="fc" id="L27">  private String subAddress = &quot;tcp://localhost:&quot;;</span>
+
+  /**
+   * ZeroMQ context.
+   */
+<span class="fc" id="L32">  private ZMQ.Context context = null;</span>
+  
+  /**
+   * ZeroMQ subscriber socket.
+   */
+<span class="fc" id="L37">  private ZMQ.Socket subscriber = null;</span>
+  
+  /**
+   * CurrentPosition event name.
+   */
+<span class="fc" id="L42">  private String currentPositionEventName = null;</span>
+  
+  /**
+   * Name of log file.
+   */
+<span class="fc" id="L47">  private String logFileName = null;</span>
+  
+  /**
+   * Config property name for TCS events topic name.
+   */
+  private static final String CURRENT_POSITION_EVENT_NAME_KEY = &quot;currentpositioneventname&quot;;
+  
+  /**
+   * Config property name for ZeroMQ subscribe port.
+   */
+  private static final String SUBSCRIBE_PORT_KEY = &quot;subscribeport&quot;;
+  
+  /**
+   * Config property name for log file.
+   */
+  private static final String LOG_FILE_NAME_KEY = &quot;logfile&quot;;
+  
+  /**
+   * Key for reading sub url from config.
+   */
+  private static final String SUB_URL_KEY = &quot;suburl&quot;;
+  
+  /**
+   * Logger instance.
+   */
+<span class="fc" id="L72">  private static final Logger logger = Logger.getLogger(McsEventListener.class.getName());</span>
+
+  /**
+   * Flag indicates if the object is cleaned up, if so caller should get a new
+   * instance by calling getInstance. After getting new instance caller should
+   * also follow init() and start() sequence.
+   */
+<span class="fc" id="L79">  private boolean isCleaned = false;</span>
+  
+  /**
+   * Singleton instance of the class.
+   */
+<span class="fc" id="L84">  private static McsEventListeningProvider instance = null;</span>
+  
+  /**
+   * Initializes new instaance of McsEventListeningProvider.
+   */
+<span class="fc" id="L89">  private McsEventListeningProvider() {</span>
+
+<span class="fc" id="L91">  }</span>
+  
+  /**
+   * Setting zero mq context.
+   * @param context ZeroMQ context for creating push, pull and pub sockets.
+   */
+  void setContext(ZMQ.Context context) {
+<span class="fc" id="L98">    this.context = context;</span>
+<span class="fc" id="L99">  }</span>
+  
+  /**
+   * Creates singleton instance.
+   * @return singleton instance.
+   */
+  public static McsEventListeningProvider getInstance() {
+<span class="fc bfc" id="L106" title="All 2 branches covered.">    if (instance == null) {</span>
+<span class="fc" id="L107">      instance = new McsEventListeningProvider();</span>
+    }
+    
+<span class="fc" id="L110">    return instance;</span>
+  }
+  
+  public void init() {
+<span class="fc" id="L114">    logger.info(&quot;Initializing McsEventListeningProvider&quot;);</span>
+    // Read configuration
+<span class="fc" id="L116">    Properties prop = new Properties();    </span>
+
+<span class="fc" id="L118">    try (InputStream input = new FileInputStream(&quot;config.properties&quot;)) {      </span>
+      // load a properties file
+<span class="fc" id="L120">      prop.load(input);</span>
+
+      // Read and assign variables            
+<span class="fc" id="L123">      currentPositionEventName = prop.getProperty(CURRENT_POSITION_EVENT_NAME_KEY);</span>
+<span class="fc" id="L124">      logFileName = prop.getProperty(LOG_FILE_NAME_KEY);</span>
+
+      // Logger initialization
+      try {
+
+<span class="fc" id="L129">        logger.addHandler(new FileHandler(logFileName));</span>
+<span class="pc" id="L130">      } catch (SecurityException ex) {</span>
+        // TODO Auto-generated catch block
+<span class="nc" id="L132">        ex.printStackTrace();</span>
+<span class="nc" id="L133">      } catch (IOException ex) {</span>
+        // TODO Auto-generated catch block
+<span class="nc" id="L135">        ex.printStackTrace();</span>
+      }
+<span class="fc" id="L137">      logger.info(&quot;config.properties loaded successfully&quot;);</span>
+
+<span class="fc" id="L139">      subAddress = prop.getProperty(SUB_URL_KEY);</span>
+<span class="fc" id="L140">      StringBuilder builder = new StringBuilder(subAddress);</span>
+<span class="fc" id="L141">      subAddress = builder.append(prop.getProperty(SUBSCRIBE_PORT_KEY))</span>
+<span class="fc" id="L142">          .toString();</span>
+      
+<span class="fc" id="L144">      logger.info(&quot;Read and assigned properties successfully&quot;);</span>
+<span class="pc bpc" id="L145" title="7 of 8 branches missed.">    } catch (IOException e1) {</span>
+      // TODO Auto-generated catch block
+<span class="nc" id="L147">      e1.printStackTrace();</span>
+<span class="nc" id="L148">      logger.severe(e1.getMessage());</span>
+    } 
+
+    // ZeroMQ initialization    
+<span class="fc" id="L152">    subscriber = context.socket(ZMQ.SUB);    </span>
+
+<span class="fc" id="L154">    logger.info(&quot;Initialized ZeroMQ context and sockets&quot;);</span>
+<span class="fc" id="L155">  }</span>
+
+  /**
+   * Create push, pull, pub, sub socket connections. Bind sockets and start
+   * thread to listen for MCS events.
+   */
+  public void start() {
+
+<span class="fc" id="L163">    logger.info(&quot;McsEventListeningProvider start called&quot;);</span>
+    
+    // Connect and subscribe for topic
+<span class="pc bpc" id="L166" title="1 of 2 branches missed.">    if (subscriber != null) {</span>
+<span class="fc" id="L167">      subscriber.connect(subAddress);</span>
+<span class="fc" id="L168">      subscriber.subscribe(currentPositionEventName.getBytes());</span>
+    }    
+
+<span class="fc" id="L171">    logger.info(&quot;ZeroMQ sub socket connected and subscribed to current position event.&quot;);</span>
+<span class="fc" id="L172">  }</span>
+
+  /**
+   * Returns if the object is cleaned up, if so caller should get a new instance
+   * by calling getInstance. Caller should also follow init() and start()
+   * sequence.
+   */
+  boolean isCleanedUp() {
+<span class="fc" id="L180">    logger.info(&quot;MCS HCD isCleanedUP called&quot;);</span>
+<span class="fc" id="L181">    return isCleaned;</span>
+  }
+
+  /**
+   * Provides cleanup for MCS HCD.
+   */
+  public void stop() {
+<span class="fc" id="L188">    logger.info(&quot;MCS HCD stop called&quot;);      </span>
+<span class="fc" id="L189">    instance = null;</span>
+
+<span class="fc bfc" id="L191" title="All 2 branches covered.">    if (subscriber != null) {</span>
+<span class="fc" id="L192">      subscriber.unsubscribe(currentPositionEventName.getBytes());</span>
+<span class="fc" id="L193">      subscriber.disconnect(subAddress);</span>
+<span class="fc" id="L194">      subscriber.close();</span>
+    }    
+    
+<span class="fc" id="L197">    logger.info(&quot;ZeroMQ cleanup completed&quot;);      </span>
+<span class="fc" id="L198">    isCleaned = true;</span>
+<span class="fc" id="L199">  }</span>
+
+  /* (non-Javadoc)
+   * @see com.tmt.tcs.mcs.mcsHcdPrototype.McsEventListener#listenforMcsEvent()
+   */
+  public McsEvent listenforMcsEvent() {
+<span class="fc" id="L205">    byte[] content = null;</span>
+<span class="fc" id="L206">    String eventName = subscriber.recvStr(ZMQ.DONTWAIT);</span>
+<span class="fc bfc" id="L207" title="All 2 branches covered.">    if (eventName == null) {</span>
+      // timeout
+<span class="fc" id="L209">      logger.info(&quot;No event received.&quot;);</span>
+<span class="fc" id="L210">      return null;</span>
+    }
+    
+<span class="pc bpc" id="L213" title="1 of 2 branches missed.">    if (eventName != null) {  </span>
+<span class="fc" id="L214">      logger.info(&quot;Event received: &quot; + eventName);</span>
+      
+      // Read 2nd part of message
+<span class="pc bpc" id="L217" title="1 of 2 branches missed.">      if (subscriber.hasReceiveMore()) {</span>
+<span class="fc" id="L218">        content = subscriber.recv(ZMQ.DONTWAIT);</span>
+        
+<span class="pc bpc" id="L220" title="1 of 2 branches missed.">        if (content != null) {</span>
+<span class="pc bpc" id="L221" title="1 of 2 branches missed.">          if (currentPositionEventName.compareTo(eventName) == 0) {</span>
+<span class="fc" id="L222">            McsCurrentPositionEvent mcsCurrentPositionEvent = null;</span>
+            try {
+<span class="fc" id="L224">              mcsCurrentPositionEvent = McsCurrentPositionEvent.parseFrom(content);</span>
+<span class="fc" id="L225">              logger.info(&quot;event parsed successfully&quot;); </span>
+<span class="pc bpc" id="L226" title="1 of 2 branches missed.">              if (mcsCurrentPositionEvent != null) {</span>
+<span class="fc" id="L227">                System.out.println(&quot;Current position event received.&quot;);</span>
+<span class="fc" id="L228">                System.out.println(&quot;Az position = &quot; </span>
+<span class="fc" id="L229">                    + ((Double)mcsCurrentPositionEvent.getAzPos()).toString());</span>
+<span class="fc" id="L230">                System.out.println(&quot;Az position demand = &quot; </span>
+<span class="fc" id="L231">                    + ((Double)mcsCurrentPositionEvent.getAzPosDemand()).toString());</span>
+<span class="fc" id="L232">                System.out.println(&quot;Az position error = &quot; </span>
+<span class="fc" id="L233">                    + ((Double)mcsCurrentPositionEvent.getAzPosError()).toString());</span>
+<span class="fc" id="L234">                System.out.println(&quot;El position = &quot; </span>
+<span class="fc" id="L235">                    + ((Double)mcsCurrentPositionEvent.getElPos()).toString());</span>
+<span class="fc" id="L236">                System.out.println(&quot;El position demand = &quot; </span>
+<span class="fc" id="L237">                    + ((Double)mcsCurrentPositionEvent.getElPosDemand()).toString());</span>
+<span class="fc" id="L238">                System.out.println(&quot;El position error = &quot; </span>
+<span class="fc" id="L239">                    + ((Double)mcsCurrentPositionEvent.getElPosError()).toString());</span>
+<span class="fc" id="L240">                System.out.println(&quot;Encoder latching time = &quot; </span>
+<span class="fc" id="L241">                    + ((Double)mcsCurrentPositionEvent.getEncodeLatchingTime()).toString());</span>
+              }
+              
+<span class="fc" id="L244">              return new CurrentPositionEvent(mcsCurrentPositionEvent);</span>
+<span class="nc" id="L245">            } catch (InvalidProtocolBufferException ex) {</span>
+<span class="nc" id="L246">              ex.printStackTrace();</span>
+            }            
+          }                   
+        }        
+      }
+    }
+    
+<span class="nc" id="L253">    return null;</span>
+  }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.6.201602180812</span>java (3) (Nov 14, 2016 10:41:01 AM)</div></body></html>

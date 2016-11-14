@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../../.resources/report.gif" type="image/gif"/><title>McsLifecycleCommand.java</title><link rel="stylesheet" href="../../../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=2;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../../.sessions.html" class="el_session">Sessions</a></span><a href="../../../index.html" class="el_report">java (3) (Nov 14, 2016 10:41:01 AM)</a> &gt; <a href="../../index.html" class="el_group">MCSHCD-Prototype</a> &gt; <a href="../index.html" class="el_bundle">src/main/java</a> &gt; <a href="index.source.html" class="el_package">com.tmt.tcs.mcs.mcsCommands</a> &gt; <span class="el_source">McsLifecycleCommand.java</span></div><h1>McsLifecycleCommand.java</h1><pre class="source lang-java linenums">package com.tmt.tcs.mcs.mcsCommands;
+
+import com.google.protobuf.GeneratedMessage;
+
+import com.tmt.tcs.mcs.protos.TcsToMcsCommandProtos.LifeCycleCommand;
+import com.tmt.tcs.mcs.protos.TcsToMcsCommandProtos.TransitionType;
+
+import java.util.Objects;
+
+/**
+ * {@link McsCommand} implementation for lifecycle command.
+ * @author E401581
+ */
+public final class McsLifecycleCommand extends McsCommand {
+       
+  /**
+   * Config key name to read lifecycle command identifier.
+   */
+  private static final String LIFECYCLE_COMMAND_NAME_KEY = &quot;lifecyclecommandname&quot;;
+      
+  /**
+   * {@link TransitionType} for the lifecycle command.
+   */
+  private TransitionType transition;
+  
+  /**
+   * Singleton instance of McsLifecycleCommand class.
+   */
+  private static McsLifecycleCommand instance;
+       
+  /**
+   * Initializes new instance of McsLifecycleCommand class.
+   */
+  private McsLifecycleCommand() {          
+<span class="fc" id="L35">    super(LIFECYCLE_COMMAND_NAME_KEY);    </span>
+<span class="fc" id="L36">  } </span>
+  
+  /**
+   * Gets singleton instance of McsLifecycleCommand. 
+   * @return object of type McsLifecycleCommand.
+   */
+  public static McsLifecycleCommand getInstance() {
+<span class="fc bfc" id="L43" title="All 2 branches covered.">    if (instance == null) {</span>
+<span class="fc" id="L44">      instance = new McsLifecycleCommand();</span>
+    }
+    
+<span class="fc" id="L47">    return instance;</span>
+  }
+  
+  /**
+   * Sets the transition needed
+   * @param transition {@link TransitionType}.
+   */
+  public void setTransition(TransitionType transition) {
+<span class="fc" id="L55">    this.transition = transition;</span>
+<span class="fc" id="L56">  }</span>
+  
+  /**
+   * encodes the command to byte packet as per the protocol.
+   * @return byte array containing packet to be sent to MCS on ZeroMQ.
+   */
+  @Override
+  public byte[] encode() {
+<span class="fc" id="L64">    byte[] packet = null;</span>
+    // Create command object
+<span class="fc" id="L66">    GeneratedMessage command = LifeCycleCommand.newBuilder()</span>
+<span class="fc" id="L67">        .setTransitionType(transition).build();</span>
+    
+<span class="pc bpc" id="L69" title="1 of 2 branches missed.">    if (/*Objects.nonNull(command)*/ command != null) {</span>
+<span class="fc" id="L70">      packet = command.toByteArray();</span>
+    }
+    
+<span class="fc" id="L73">    return packet;</span>
+  }
+ 
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.6.201602180812</span>java (3) (Nov 14, 2016 10:41:01 AM)</div></body></html>
